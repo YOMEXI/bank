@@ -66,16 +66,62 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public ResponseEntity MakeDeposit(Long accountNumber, TransactionDto dto) {
 
-        System.out.println(accountNumber);
-        System.out.println(dto);
-        return this.accountMethods.makeDeposit(accountNumber,dto);
 
+        if (dto.getDeposit() < 1  || dto.getDeposit() > 1_000_000)
+            throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Deposit must not be less than 1 naira or greater  than 1 million");
+
+
+        Customer ifCustomerExists= customerRepository.findByAccountNumber(accountNumber);
+
+        if (ifCustomerExists==null)
+            throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Account with Account Number Does not Exists");
+
+
+        Long newBalance = ifCustomerExists.getBalance() + dto.getDeposit();
+
+        Transactions NewTransaction = new Transactions();
+        NewTransaction.setCurrentBalance(ifCustomerExists.getBalance());
+        NewTransaction.setDeposit(dto.getDeposit());
+        NewTransaction.setNewBalance(newBalance);
+        NewTransaction.setWithdrawal(dto.getWithdrawal());
+        NewTransaction.setCustomer(ifCustomerExists);
+
+        ifCustomerExists.setBalance(newBalance);
+
+        customerRepository.save(ifCustomerExists);
+        transactionRepository.save(NewTransaction);
+
+        return new ResponseEntity<>("Deposit Made successfully", HttpStatus.OK);
 
     }
 
     @Override
     public ResponseEntity MakeWithdrawal(Long accountNumber, TransactionDto dto) {
 
-        return this.accountMethods.makeWithdrawal(accountNumber,dto);
+        Customer ifCustomerExists= customerRepository.findByAccountNumber(accountNumber);
+
+        if (ifCustomerExists==null)
+            throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Account with Account Number Does not Exists");
+
+
+        if (ifCustomerExists.getBalance() - dto.getWithdrawal() < 500)
+            throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Balance after withdrawal should be above 500naira");
+
+
+        Long newBalance = ifCustomerExists.getBalance() - dto.getWithdrawal();
+
+        Transactions NewTransaction = new Transactions();
+        NewTransaction.setCurrentBalance(ifCustomerExists.getBalance());
+        NewTransaction.setDeposit(dto.getDeposit());
+        NewTransaction.setNewBalance(newBalance);
+        NewTransaction.setWithdrawal(dto.getWithdrawal());
+        NewTransaction.setCustomer(ifCustomerExists);
+
+        ifCustomerExists.setBalance(newBalance);
+
+        customerRepository.save(ifCustomerExists);
+        transactionRepository.save(NewTransaction);
+
+        return new ResponseEntity<>("Withdrawal Made successfully", HttpStatus.OK);
     }
 }
