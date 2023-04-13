@@ -106,16 +106,6 @@ public class AccountMethods {
         return new ResponseEntity<>("Withdrawal Made successfully", HttpStatus.OK);
     }
 
-    public boolean  CheckIfAccountExist(Long accountNumber){
 
-        List<Customer> isAccountAvailabe = customerRepository.findAll();
-
-
-        isAccountAvailabe.forEach(
-                acc-> System.out.println(acc)
-        );
-
-        return  true;
-    }
 
 }
