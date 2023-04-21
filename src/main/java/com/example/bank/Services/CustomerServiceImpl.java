@@ -7,6 +7,7 @@ import com.example.bank.HelperClasses.AccountMethods;
 import com.example.bank.Mapper.CustomerMapper;
 import com.example.bank.Mapper.TransactionMapper;
 import com.example.bank.Payload.CustomerDto;
+import com.example.bank.Payload.NewCustomerDto;
 import com.example.bank.Payload.TransactionDto;
 import com.example.bank.Repository.CustomerRepository;
 import com.example.bank.Repository.TransactionRepository;
@@ -16,9 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.Set;
+
 
 @Service
 @RequiredArgsConstructor
@@ -28,20 +28,30 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final TransactionRepository transactionRepository;
     private final CustomerMapper customerMapper;
-
-    private final TransactionMapper transactionMapper;
     private final AccountMethods  accountMethods;
 
     @Override
-    public CustomerDto createAccount(CustomerDto customerDto)  {
+    public NewCustomerDto createAccount(CustomerDto customerDto)  {
+
+        if(customerDto.getBalance() < 500){
+            throw new CustomerApiException(HttpStatus.BAD_REQUEST,
+                    "Minimum initial deposit should be 500");
+        }
 
         Long AccountNumber=   this.accountMethods.createAccountNumber();
 
-        Customer  ifCustomerExists= customerRepository
-                .findByAccountName(AccountNumber.toString());
+       Optional <Customer>  ifAccountNumberHasAlreadyBeenAssigned= customerRepository
+                .findByAccountNumber(AccountNumber);
+
+        if (ifAccountNumberHasAlreadyBeenAssigned.isPresent())
+            throw new CustomerApiException(HttpStatus.BAD_REQUEST,
+                    "Account Number Already Assigned please try again");
+
+       Optional <Customer>  ifCustomerExists= customerRepository
+                .findByAccountName(customerDto.getAccountName());
 
 
-        if (ifCustomerExists !=null)
+        if (ifCustomerExists.isPresent())
             throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Account with Account Name Already Exists");
 
         Customer customer = customerMapper.CustomerDtoToCustomer(customerDto);
@@ -49,18 +59,18 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setAccountNumber(AccountNumber);
 
        Customer newCustomer = customerRepository.save(customer);
-        return customerMapper.CustomerToCustomerDto(newCustomer);
+        return customerMapper.CustomerToNewCustomerDto(newCustomer);
     }
 
     @Override
     public CustomerDto GetSingleUserAccountDetails(Long accountNumber) {
 
-        Customer  ifCustomerExists= customerRepository
+       Optional<Customer>  ifCustomerExists= customerRepository
                 .findByAccountNumber(accountNumber);
 
 
 
-        return customerMapper.CustomerToCustomerDto(ifCustomerExists);
+        return customerMapper.CustomerToCustomerDto(ifCustomerExists.get());
     }
 
     @Override
@@ -71,24 +81,24 @@ public class CustomerServiceImpl implements CustomerService {
             throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Deposit must not be less than 1 naira or greater  than 1 million");
 
 
-        Customer ifCustomerExists= customerRepository.findByAccountNumber(accountNumber);
+        Optional<Customer> ifCustomerExists= customerRepository.findByAccountNumber(accountNumber);
 
-        if (ifCustomerExists==null)
+        if (ifCustomerExists.isEmpty())
             throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Account with Account Number Does not Exists");
 
 
-        Long newBalance = ifCustomerExists.getBalance() + dto.getDeposit();
+        Long newBalance = ifCustomerExists.get().getBalance() + dto.getDeposit();
 
         Transactions NewTransaction = new Transactions();
-        NewTransaction.setCurrentBalance(ifCustomerExists.getBalance());
+        NewTransaction.setCurrentBalance(ifCustomerExists.get().getBalance());
         NewTransaction.setDeposit(dto.getDeposit());
         NewTransaction.setNewBalance(newBalance);
         NewTransaction.setWithdrawal(dto.getWithdrawal());
-        NewTransaction.setCustomer(ifCustomerExists);
+        NewTransaction.setCustomer(ifCustomerExists.get());
 
-        ifCustomerExists.setBalance(newBalance);
+        ifCustomerExists.get().setBalance(newBalance);
 
-        customerRepository.save(ifCustomerExists);
+        customerRepository.save(ifCustomerExists.get());
         transactionRepository.save(NewTransaction);
 
         return new ResponseEntity<>("Deposit Made successfully", HttpStatus.OK);
@@ -98,28 +108,32 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public ResponseEntity MakeWithdrawal(Long accountNumber, TransactionDto dto) {
 
-        Customer ifCustomerExists= customerRepository.findByAccountNumber(accountNumber);
+        if (dto.getWithdrawal() <  1)
+            throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Withdrawal must not be less than 1 naira or greater  than 1 million");
 
-        if (ifCustomerExists==null)
+
+        Optional <Customer> ifCustomerExists= customerRepository.findByAccountNumber(accountNumber);
+
+        if (ifCustomerExists.isEmpty())
             throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Account with Account Number Does not Exists");
 
 
-        if (ifCustomerExists.getBalance() - dto.getWithdrawal() < 500)
+        if (ifCustomerExists.get().getBalance() - dto.getWithdrawal() < 500)
             throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Balance after withdrawal should be above 500naira");
 
 
-        Long newBalance = ifCustomerExists.getBalance() - dto.getWithdrawal();
+        Long newBalance = ifCustomerExists.get().getBalance() - dto.getWithdrawal();
 
         Transactions NewTransaction = new Transactions();
-        NewTransaction.setCurrentBalance(ifCustomerExists.getBalance());
+        NewTransaction.setCurrentBalance(ifCustomerExists.get().getBalance());
         NewTransaction.setDeposit(dto.getDeposit());
         NewTransaction.setNewBalance(newBalance);
         NewTransaction.setWithdrawal(dto.getWithdrawal());
-        NewTransaction.setCustomer(ifCustomerExists);
+        NewTransaction.setCustomer(ifCustomerExists.get());
 
-        ifCustomerExists.setBalance(newBalance);
+        ifCustomerExists.get().setBalance(newBalance);
 
-        customerRepository.save(ifCustomerExists);
+        customerRepository.save(ifCustomerExists.get());
         transactionRepository.save(NewTransaction);
 
         return new ResponseEntity<>("Withdrawal Made successfully", HttpStatus.OK);

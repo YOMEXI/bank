@@ -1,11 +1,12 @@
 package com.example.bank.Services;
 
 import com.example.bank.Payload.CustomerDto;
+import com.example.bank.Payload.NewCustomerDto;
 import com.example.bank.Payload.TransactionDto;
 import org.springframework.http.ResponseEntity;
 
 public interface CustomerService {
-    CustomerDto createAccount(CustomerDto customerDto);
+    NewCustomerDto createAccount(CustomerDto customerDto);
 
     CustomerDto GetSingleUserAccountDetails(Long accountNumber);
 
