@@ -1,6 +1,7 @@
 package com.example.bank.Controllers;
 
 import com.example.bank.Payload.CustomerDto;
+import com.example.bank.Payload.NewCustomerDto;
 import com.example.bank.Payload.TransactionDto;
 import com.example.bank.Services.CustomerService;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,7 @@ public class CustomerController {
 
     private final CustomerService customerService;
     @PostMapping()
-    public CustomerDto CreateCustomer (@Validated @RequestBody CustomerDto customer){
+    public NewCustomerDto CreateCustomer (@Validated @RequestBody CustomerDto customer){
 
         return  customerService.createAccount(customer);
 

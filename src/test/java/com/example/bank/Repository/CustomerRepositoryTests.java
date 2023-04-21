@@ -64,7 +64,5 @@ public class CustomerRepositoryTests {
         assertThat(createdAccount.getEmail()).isEqualTo("thompson@gmail.com");
         assertThat(createdAccount.getAccountNumber()).isEqualTo(1111111112L);
 
-
-
     }
 }

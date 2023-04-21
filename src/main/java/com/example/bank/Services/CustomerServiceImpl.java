@@ -7,6 +7,7 @@ import com.example.bank.HelperClasses.AccountMethods;
 import com.example.bank.Mapper.CustomerMapper;
 import com.example.bank.Mapper.TransactionMapper;
 import com.example.bank.Payload.CustomerDto;
+import com.example.bank.Payload.NewCustomerDto;
 import com.example.bank.Payload.TransactionDto;
 import com.example.bank.Repository.CustomerRepository;
 import com.example.bank.Repository.TransactionRepository;
@@ -30,7 +31,12 @@ public class CustomerServiceImpl implements CustomerService {
     private final AccountMethods  accountMethods;
 
     @Override
-    public CustomerDto createAccount(CustomerDto customerDto)  {
+    public NewCustomerDto createAccount(CustomerDto customerDto)  {
+
+        if(customerDto.getBalance() < 500){
+            throw new CustomerApiException(HttpStatus.BAD_REQUEST,
+                    "Minimum initial deposit should be 500");
+        }
 
         Long AccountNumber=   this.accountMethods.createAccountNumber();
 
@@ -53,7 +59,7 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setAccountNumber(AccountNumber);
 
        Customer newCustomer = customerRepository.save(customer);
-        return customerMapper.CustomerToCustomerDto(newCustomer);
+        return customerMapper.CustomerToNewCustomerDto(newCustomer);
     }
 
     @Override
@@ -102,7 +108,11 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public ResponseEntity MakeWithdrawal(Long accountNumber, TransactionDto dto) {
 
-       Optional <Customer> ifCustomerExists= customerRepository.findByAccountNumber(accountNumber);
+        if (dto.getWithdrawal() <  1)
+            throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Withdrawal must not be less than 1 naira or greater  than 1 million");
+
+
+        Optional <Customer> ifCustomerExists= customerRepository.findByAccountNumber(accountNumber);
 
         if (ifCustomerExists.isEmpty())
             throw new CustomerApiException(HttpStatus.BAD_REQUEST,"Account with Account Number Does not Exists");
